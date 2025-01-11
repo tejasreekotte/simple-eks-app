@@ -1,4 +1,4 @@
-### Documentation: Running a Flask Application in Docker, Pushing to Amazon ECR, and Creating an EKS Cluster
+### Documentation: EKS Deployment Workflow
 
 This guide outlines the steps to create, containerize, and push a simple Flask application to Amazon Elastic Container Registry (ECR), provision an Amazon EKS cluster using Terraform, and set up monitoring with Prometheus and Grafana.
 
