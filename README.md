@@ -434,6 +434,7 @@ kubectl get service flask-service
 http://<EXTERNAL-IP>
 ```
 ![image](https://github.com/user-attachments/assets/1f625ca6-2173-44da-9a4b-87e0cd3f0593)
+![image](https://github.com/user-attachments/assets/e488ecfb-83fd-4fe1-a698-4b8ddee2d4a1)
 
 ---
 
