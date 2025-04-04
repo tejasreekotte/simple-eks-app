@@ -342,7 +342,7 @@ Confirm with `yes` when prompted.
 6. Configure `kubectl` to access the cluster:
 
 ```bash
-aws eks --region ap-south-1 update-kubeconfig --name ascode-cluster
+aws eks --region ap-south-1 update-kubeconfig --name test-cluster
 ```
 ![image](https://github.com/user-attachments/assets/b13d03d4-ae27-42cb-96c1-e810da0547d5)
 
