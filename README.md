@@ -371,34 +371,26 @@ cd ../k8s
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: flask-app
+  name: simple-flask-app
   labels:
-    app: flask-app
+    app: simple-flask-app
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: flask-app
+      app: simple-flask-app
   template:
     metadata:
       labels:
-        app: flask-app
+        app: simple-flask-app
     spec:
       containers:
       - name: flask-container
-        image: <ECR_REPOSITORY_URI>:latest
+        image: <ECR image URI>:latest
         ports:
         - containerPort: 5000
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "250m"
-          limits:
-            memory: "128Mi"
-            cpu: "500m"
-      imagePullSecrets:
-      - name: ecr-secret
 ```
+![image](https://github.com/user-attachments/assets/de2eb9ac-7d96-4945-9164-c9d89b5ed9cb)
 
 **`k8s/service.yaml`**:
 
@@ -406,18 +398,17 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: flask-service
-  labels:
-    app: flask-app
+  name: simple-flask-app-service
 spec:
-  selector:
-    app: flask-app
-  ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 5000
   type: LoadBalancer
+  selector:
+    app: simple-flask-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
 ```
+![image](https://github.com/user-attachments/assets/ea2c84be-3d98-4627-b937-ed901b23b5e4)
 
 #### **10.2 Apply the Manifests**
 
@@ -427,6 +418,7 @@ spec:
 kubectl apply -f deployment.yaml
 kubectl apply -f service.yaml
 ```
+![image](https://github.com/user-attachments/assets/59182ab9-ea48-4ecd-9593-df6003ba5e58)
 
 2. Verify the resources:
 
@@ -434,101 +426,18 @@ kubectl apply -f service.yaml
 kubectl get pods
 kubectl get service flask-service
 ```
+![image](https://github.com/user-attachments/assets/3fdfb3a3-50e1-4d3a-8a8d-b001e172ebca)
 
 3. Access your application using the `EXTERNAL-IP` of the service:
 
 ```bash
 http://<EXTERNAL-IP>
 ```
+![image](https://github.com/user-attachments/assets/1f625ca6-2173-44da-9a4b-87e0cd3f0593)
 
 ---
 
-### **11. Set Up Monitoring with Prometheus and Grafana**
 
-#### **11.1 Prerequisites**
 
-- An EKS cluster should be up and running.
-- Install Helm 3.
-- Ensure an EC2 instance or a local machine has access to the EKS cluster.
-
-#### **11.2 Implementation Steps**
-
-1. Add Helm Stable Charts:
-
-```bash
-helm repo add stable https://charts.helm.sh/stable
-```
-
-2. Add the Prometheus Helm repository:
-
-```bash
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-```
-
-3. Search for Prometheus Helm charts:
-
-```bash
-helm search repo prometheus-community
-```
-
-4. Create a namespace for Prometheus:
-
-```bash
-kubectl create namespace prometheus
-```
-
-5. Install kube-prometheus-stack:
-
-```bash
-helm install stable prometheus-community/kube-prometheus-stack -n prometheus
-```
-
-6. Verify the Prometheus and Grafana pods:
-
-```bash
-kubectl get pods -n prometheus
-```
-
-7. Verify services:
-
-```bash
-kubectl get svc -n prometheus
-```
-
-8. Expose Prometheus and Grafana using LoadBalancer or NodePort:
-
-- Edit Prometheus service:
-
-```bash
-kubectl edit svc stable-kube-prometheus-sta-prometheus -n prometheus
-```
-
-- Edit Grafana service:
-
-```bash
-kubectl edit svc stable-grafana -n prometheus
-```
-
-9. Get the LoadBalancer URL and access the Grafana UI in the browser:
-
-- Default credentials:
-  - **Username**: `admin`
-  - **Password**: `admin`
-
-10. Create Grafana Dashboards:
-
-- For Kubernetes Monitoring:
-  1. Click the `+` button on the left panel and select `Import`.
-  2. Enter the dashboard ID `12740`.
-  3. Click `Load`.
-  4. Select `Prometheus` as the data source.
-  5. Click `Import`.
-
-- For Cluster Monitoring:
-  1. Follow the same steps as above but use dashboard ID `3119`.
----
-
-### **12. Summary**
-
-This guide walks you through creating a Flask application, containerizing it, pushing the image to Amazon ECR, provisioning an EKS cluster with Terraform, deploying the application using Kubernetes, and setting up monitoring with Prometheus and Grafana. For further assistance, feel free to reach out!
+This guide walks you through creating a Flask application, containerizing it, pushing the image to Amazon ECR, provisioning an EKS cluster with Terraform, deploying the application using Kubernetes, 
 
