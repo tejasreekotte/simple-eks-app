@@ -440,5 +440,5 @@ http://<EXTERNAL-IP>
 
 
 
-This guide walks you through creating a Flask application, containerizing it, pushing the image to Amazon ECR, provisioning an EKS cluster with Terraform, deploying the application using Kubernetes, 
+This guide walks you through creating a Flask application, containerizing it, pushing the image to Amazon ECR, provisioning an EKS cluster with Terraform, deploying the application using Kubernetes.
 
