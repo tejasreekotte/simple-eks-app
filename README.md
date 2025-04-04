@@ -85,14 +85,17 @@ sudo docker build -t simple-flask-app .
 - The `.` specifies the current directory as the build context.
 
 ---
+![image](https://github.com/user-attachments/assets/3ac7266c-23b4-4e01-9857-9babd5be093b)
+
 
 ### **4. Create an Amazon ECR Repository**
 
-1. Run the following command to create an ECR repository in the `us-west-2` region:
+1. Run the following command to create an ECR repository in the `ap-south-1` region:
 
 ```bash
-aws ecr create-repository --repository-name simple-flask-app --region us-west-2
+aws ecr create-repository --repository-name simple-flask-app --region ap-south-1
 ```
+![image](https://github.com/user-attachments/assets/41e1bcd7-a09f-4d49-8ea7-65e10bb3ffb5)
 
 2. Note the repository URI from the output.
 
@@ -103,14 +106,17 @@ aws ecr create-repository --repository-name simple-flask-app --region us-west-2
 1. Use the following command to authenticate Docker with the ECR repository:
 
 ```bash
-aws ecr get-login-password --region us-west-2 | sudo docker login --username AWS --password-stdin <ECR_REPOSITORY_URI>
+aws ecr get-login-password --region ap-south-1 | sudo docker login --username AWS --password-stdin <ECR_REPOSITORY_URI>
 ```
+![image](https://github.com/user-attachments/assets/8d042805-6b43-4713-8f28-74e84a8fbe51)
+![image](https://github.com/user-attachments/assets/03173838-9356-4db5-8137-072c83dea3a4)
 
 2. If successful, you will see:
 
 ```
 Login Succeeded
 ```
+![image](https://github.com/user-attachments/assets/3710795e-73a2-46e8-9d2e-14004fba24d2)
 
 ---
 
@@ -131,16 +137,19 @@ sudo docker tag simple-flask-app:latest <ECR_REPOSITORY_URI>:latest
 ```bash
 sudo docker push <ECR_REPOSITORY_URI>:latest
 ```
+![image](https://github.com/user-attachments/assets/8d9a39cc-66f2-4875-82a8-b96622e1625c)
 
 2. Wait for the push to complete. The image will now be available in the ECR repository.
+
 
 ---
 
 ### **8. Verify the Image in ECR**
 
-1. Open the [Amazon ECR Console](https://us-west-2.console.aws.amazon.com/ecr/repositories).
+1. Open the [Amazon ECR Console](https://ap-south-1.console.aws.amazon.com/ecr/repositories).
 2. Select the repository named `simple-flask-app`.
 3. Confirm that the image with the tag `latest` is listed.
+![image](https://github.com/user-attachments/assets/c45cfcfa-81fb-4e40-a767-ee48bada5ca0)
 
 ---
 
@@ -166,7 +175,7 @@ You will be prompted to provide the following details:
 
 - **AWS Access Key ID**: Enter your access key.
 - **AWS Secret Access Key**: Enter your secret key.
-- **Default region name**: Enter `us-west-2`.
+- **Default region name**: Enter `ap-south-1`.
 - **Default output format**: Enter `json` (or leave blank).
 
 Verify the configuration with:
@@ -184,122 +193,113 @@ Create the following Terraform files to provision an EKS cluster:
 **`terraform/main.tf`**:
 ```hcl
 provider "aws" {
-  region = var.aws_region
+  region = "ap-south-1"
 }
 
-locals {
-  tags = {
-    Example = var.cluster_name
+resource "aws_eks_cluster" "eks_cluster" {
+  name     = "test-cluster"
+  role_arn = aws_iam_role.eks_cluster_role.arn
+
+  vpc_config {
+    subnet_ids = [
+      "subnet-0d04eb9feada6a767",
+      "subnet-0a53809fb1146d783",
+      "subnet-0dd91f98cb4d34976"
+    ]
   }
+
+  depends_on = [aws_iam_role_policy_attachment.eks_cluster_AmazonEKSClusterPolicy]
 }
 
-module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 4.0"
+resource "aws_eks_node_group" "eks_nodes" {
+  cluster_name    = aws_eks_cluster.eks_cluster.name
+  node_group_name = "test-nodes"
+  node_role_arn   = aws_iam_role.eks_node_role.arn
+  subnet_ids      = [
+    "subnet-0d04eb9feada6a767",
+    "subnet-0a53809fb1146d783",
+    "subnet-0dd91f98cb4d34976"
+  ]
 
-  name = var.cluster_name
-  cidr = var.vpc_cidr
-
-  azs             = var.azs
-  private_subnets = var.private_subnets
-  public_subnets  = var.public_subnets
-  intra_subnets   = var.intra_subnets
-
-  enable_nat_gateway = true
-
-  public_subnet_tags = {
-    "kubernetes.io/role/elb" = 1
+  scaling_config {
+    desired_size = 2
+    max_size     = 3
+    min_size     = 1
   }
 
-  private_subnet_tags = {
-    "kubernetes.io/role/internal-elb" = 1
-  }
+  instance_types = ["t3.medium"]
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_node_AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.eks_node_AmazonEC2ContainerRegistryReadOnly,
+    aws_iam_role_policy_attachment.eks_node_AmazonEKS_CNI_Policy
+  ]
 }
 
-module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "19.15.1"
+resource "aws_iam_role" "eks_cluster_role" {
+  name = "eks-cluster-role"
 
-  cluster_name                   = var.cluster_name
-  cluster_endpoint_public_access = true
-
-  cluster_addons = {
-    coredns = {
-      most_recent = true
-    }
-    kube-proxy = {
-      most_recent = true
-    }
-    vpc-cni = {
-      most_recent = true
-    }
-  }
-
-  vpc_id                   = module.vpc.vpc_id
-  subnet_ids               = module.vpc.private_subnets
-  control_plane_subnet_ids = module.vpc.intra_subnets
-
-  eks_managed_node_group_defaults = {
-    ami_type       = "AL2_x86_64"
-    instance_types = ["m5.large"]
-
-    attach_cluster_primary_security_group = true
-  }
-
-  eks_managed_node_groups = {
-    ascode-cluster-wg = {
-      min_size     = 1
-      max_size     = 2
-      desired_size = 1
-
-      instance_types = ["t3.large"]
-      capacity_type  = "SPOT"
-
-      tags = {
-        ExtraTag = "helloworld"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Action = "sts:AssumeRole",
+      Effect = "Allow",
+      Principal = {
+        Service = "eks.amazonaws.com"
       }
-    }
-  }
-
-  tags = local.tags
-}
-```
-
-**`terraform/variables.tf`**:
-```hcl
-variable "aws_region" {
-  description = "AWS region for the infrastructure"
-  default     = "us-west-2"
+    }]
+  })
 }
 
-variable "cluster_name" {
-  description = "Name of the EKS cluster"
-  default     = "ascode-cluster"
+resource "aws_iam_role_policy_attachment" "eks_cluster_AmazonEKSClusterPolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  role       = aws_iam_role.eks_cluster_role.name
 }
 
-variable "vpc_cidr" {
-  description = "CIDR block for the VPC"
-  default     = "10.123.0.0/16"
+resource "aws_iam_role" "eks_node_role" {
+  name = "eks-node-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Action = "sts:AssumeRole",
+      Effect = "Allow",
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
 }
 
-variable "azs" {
-  description = "Availability zones"
-  default     = ["us-west-2a", "us-west-2b"]
+resource "aws_iam_role_policy_attachment" "eks_node_AmazonEKSWorkerNodePolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.eks_node_role.name
 }
 
-variable "public_subnets" {
-  description = "Public subnet CIDRs"
-  default     = ["10.123.1.0/24", "10.123.2.0/24"]
+resource "aws_iam_role_policy_attachment" "eks_node_AmazonEC2ContainerRegistryReadOnly" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.eks_node_role.name
 }
 
-variable "private_subnets" {
-  description = "Private subnet CIDRs"
-  default     = ["10.123.3.0/24", "10.123.4.0/24"]
+resource "aws_iam_role_policy_attachment" "eks_node_AmazonEKS_CNI_Policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.eks_node_role.name
 }
 
-variable "intra_subnets" {
-  description = "Intra subnet CIDRs"
-  default     = ["10.123.5.0/24", "10.123.6.0/24"]
+output "cluster_name" {
+  value = aws_eks_cluster.eks_cluster.name
+}
+
+output "node_group_name" {
+  value = aws_eks_node_group.eks_nodes.node_group_name
+}
+
+output "cluster_endpoint" {
+  value = aws_eks_cluster.eks_cluster.endpoint
+}
+
+output "kubeconfig_command" {
+  value = "aws eks update-kubeconfig --region ap-south-1 --name test-cluster"
 }
 ```
 
@@ -334,20 +334,24 @@ terraform plan
 ```bash
 terraform apply
 ```
+![image](https://github.com/user-attachments/assets/0b7d9e31-d04e-4b9a-9629-13ab92cdf59f)
+![image](https://github.com/user-attachments/assets/5ebb4b39-2ed1-4615-a52f-5605bdd022e4)
 
 Confirm with `yes` when prompted.
 
 6. Configure `kubectl` to access the cluster:
 
 ```bash
-aws eks --region us-west-2 update-kubeconfig --name ascode-cluster
+aws eks --region ap-south-1 update-kubeconfig --name ascode-cluster
 ```
+![image](https://github.com/user-attachments/assets/b13d03d4-ae27-42cb-96c1-e810da0547d5)
 
 7. Verify the nodes:
 
 ```bash
 kubectl get nodes
 ```
+![image](https://github.com/user-attachments/assets/78bf6ee7-c6f0-48b8-bcc7-18f40772b5f1)
 
 ---
 
