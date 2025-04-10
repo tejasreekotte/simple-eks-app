@@ -98,7 +98,7 @@ aws ecr create-repository --repository-name simple-flask-app --region ap-south-1
 ![image](https://github.com/user-attachments/assets/41e1bcd7-a09f-4d49-8ea7-65e10bb3ffb5)
 
 2. Note the repository URI from the output.
-
+![image](https://github.com/user-attachments/assets/03173838-9356-4db5-8137-072c83dea3a4)
 ---
 
 ### **5. Authenticate Docker to ECR**
@@ -108,7 +108,7 @@ aws ecr create-repository --repository-name simple-flask-app --region ap-south-1
 ```bash
 aws ecr get-login-password --region ap-south-1 | sudo docker login --username AWS --password-stdin <ECR_REPOSITORY_URI>
 ```
-![image](https://github.com/user-attachments/assets/03173838-9356-4db5-8137-072c83dea3a4)
+
 
 2. If successful, you will see:
 
